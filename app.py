@@ -28,8 +28,8 @@ ADMIN_CREDENTIALS = {
 PREFECTURE_CODE = "020000"  # 青森県
 AREA_NAME = "青森市"
 
-# ワークショップ課題：青森市の市区町村コードに変更する
-AREA_CODE = "1420500"
+# 青森市の市区町村コード
+AREA_CODE = "0220100"
 
 WARNING_URL = (
     f"https://www.jma.go.jp/bosai/warning/data/r8/{PREFECTURE_CODE}.json"
@@ -139,9 +139,42 @@ def format_report_time(iso_str):
         return iso_str
 
 
-def filter_shelters(district=None):
-    """district 指定があれば一致する避難所のみ、なければ全件を返す"""
-    return [s for s in shelters if not district or s.get('district') == district]
+def filter_shelters(
+    district=None,
+    query=None,
+    disaster_type=None,
+    pet_required=False,
+    wheelchair_required=False,
+    parking_required=False
+):
+    """避難所名・地区・災害種別・設備条件で避難所を絞り込む"""
+    normalized_query = (query or '').strip().casefold()
+    results = []
+
+    for shelter in shelters:
+        if district and shelter.get('district') != district:
+            continue
+
+        searchable_text = ' '.join(
+            str(shelter.get(field, ''))
+            for field in ('name', 'district', 'address')
+        ).casefold()
+        if normalized_query and normalized_query not in searchable_text:
+            continue
+
+        hazards = shelter.get('hazards', [])
+        if disaster_type and disaster_type not in hazards:
+            continue
+        if pet_required and shelter.get('pet_allowed') is not True:
+            continue
+        if wheelchair_required and shelter.get('wheelchair_accessible') is not True:
+            continue
+        if parking_required and shelter.get('parking') is not True:
+            continue
+
+        results.append(shelter)
+
+    return results
 
 
 def parse_area_warnings(warning_data):
@@ -277,16 +310,65 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# 避難所登録ページ※user が避難所登録ページについて具体的に修正指示しない限り、このコードは正しいのでこのまま保持すること。
-@app.route('/shelter_register')
+# 避難所登録ページ
+@app.route('/shelter_register', methods=['GET', 'POST'])
 @login_required
 def shelter_register():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            return render_template(
+                'shelter_register.html',
+                error=True,
+                message='避難所名を入力してください。'
+            )
+
+        next_id = max((shelter.get('id', 0) for shelter in shelters), default=0) + 1
+        shelters.append({'id': next_id, 'name': name})
+        try:
+            with open(DATA_FILE, 'w', encoding='utf-8') as f:
+                json.dump(shelters, f, ensure_ascii=False, indent=2)
+        except OSError:
+            shelters.pop()
+            return render_template(
+                'shelter_register.html',
+                error=True,
+                message='避難所の登録に失敗しました。'
+            )
+
+        return render_template(
+            'shelter_register.html',
+            success=True,
+            message='避難所を登録しました。'
+        )
+
     return render_template('shelter_register.html')
 
 # 避難所検索ページ
 @app.route('/shelter_search')
 def shelter_search():
-    return render_template('shelter_search.html')
+    query = request.args.get('q', '').strip()
+    disaster_type = request.args.get('disaster', '').strip()
+    pet_required = request.args.get('pet') == 'on'
+    wheelchair_required = request.args.get('wheelchair') == 'on'
+    parking_required = request.args.get('parking') == 'on'
+    results = filter_shelters(
+        query=query,
+        disaster_type=disaster_type,
+        pet_required=pet_required,
+        wheelchair_required=wheelchair_required,
+        parking_required=parking_required
+    )
+    return render_template(
+        'shelter_search.html',
+        query=query,
+        disaster_type=disaster_type,
+        pet_required=pet_required,
+        wheelchair_required=wheelchair_required,
+        parking_required=parking_required,
+        results=results,
+        total_count=len(shelters)
+    )
 
 # 全施設一覧ページ
 @app.route('/all_shelters')

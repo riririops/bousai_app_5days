@@ -1,8 +1,76 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>避難所検索</h2>
-<p>登録されている避難所を確認できます。</p>
+<section class="dashboard-card">
+	<div class="section-heading">
+		<h2><span class="section-icon" aria-hidden="true">&#128269;</span>避難所検索</h2>
+	</div>
 
-<p><a href="/all_shelters">全施設一覧</a></p>
+	<div class="search-panel">
+		<form class="search-form" method="get" action="{{ url_for('shelter_search') }}">
+			<label class="search-field" for="shelter-query">
+				避難所名・地区名・住所で検索
+				<input
+					type="search"
+					id="shelter-query"
+					name="q"
+					value="{{ query }}"
+					placeholder="例：小学校、中央地区"
+					autocomplete="off"
+				>
+			</label>
+			<div class="search-actions">
+				<button type="submit">検索</button>
+				<a class="clear-button" href="{{ url_for('shelter_search') }}">条件をクリア</a>
+			</div>
+			<div class="filter-options" aria-label="避難所の対応条件">
+				<p class="filter-title">対応条件で絞り込む</p>
+				<label class="filter-option" for="disaster">
+					災害の種類
+					<select id="disaster" name="disaster">
+						<option value="">指定しない</option>
+						<option value="洪水" {% if disaster_type == '洪水' %}selected{% endif %}>洪水</option>
+						<option value="土砂災害" {% if disaster_type == '土砂災害' %}selected{% endif %}>土砂災害</option>
+						<option value="津波" {% if disaster_type == '津波' %}selected{% endif %}>津波</option>
+					</select>
+				</label>
+				<label class="filter-option" for="pet">
+					<input type="checkbox" id="pet" name="pet" {% if pet_required %}checked{% endif %}>
+					ペット同伴可
+				</label>
+				<label class="filter-option" for="wheelchair">
+					<input type="checkbox" id="wheelchair" name="wheelchair" {% if wheelchair_required %}checked{% endif %}>
+					車椅子対応
+				</label>
+				<label class="filter-option" for="parking">
+					<input type="checkbox" id="parking" name="parking" {% if parking_required %}checked{% endif %}>
+					駐車場あり
+				</label>
+			</div>
+		</form>
+	</div>
+
+	<p class="result-summary">
+		{% if query %}「{{ query }}」の検索結果{% else %}登録されている避難所{% endif %}
+		：{{ results|length }}件 / 全{{ total_count }}件
+	</p>
+
+	{% if results %}
+		<ul class="shelter-list">
+			{% for shelter in results %}
+			<li class="shelter-item">
+				<span class="shelter-number">{{ loop.index }}</span>
+					<span>
+						<strong>{{ shelter.name }}</strong>
+						{% if shelter.district or shelter.address %}
+							<br><small>{{ shelter.district or '' }}{% if shelter.district and shelter.address %}・{% endif %}{{ shelter.address or '' }}</small>
+						{% endif %}
+					</span>
+			</li>
+			{% endfor %}
+		</ul>
+	{% else %}
+		<p class="empty-result">条件に一致する避難所が見つかりませんでした。</p>
+	{% endif %}
+</section>
 {% endblock %}

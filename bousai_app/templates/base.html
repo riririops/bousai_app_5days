@@ -4,31 +4,534 @@
   <meta charset="utf-8">
   <title>{% block title %}防災アプリ{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      --blue: #1658ad;
+      --blue-dark: #10458d;
+      --ink: #244b82;
+      --muted: #667085;
+      --surface: #ffffff;
+      --page: #f5f8fc;
+      --line: #e5ebf3;
+      --success: #169447;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #27364b;
+      background: linear-gradient(180deg, #f8fbff 0%, var(--page) 100%);
+      font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
+      line-height: 1.7;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: linear-gradient(105deg, var(--blue-dark), var(--blue));
+      box-shadow: 0 2px 12px rgba(16, 69, 141, 0.2);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: min(100% - 32px, 1180px);
+      min-height: 70px;
+      margin: 0 auto;
+    }
+
+    .brand {
+      color: #fff;
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-home {
+      padding: 6px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.55);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+
+    .header-home:hover,
+    .header-home:focus-visible {
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+    }
+
+    .menu-toggle {
+      display: inline-grid;
+      width: 44px;
+      height: 44px;
+      padding: 9px;
+      place-content: center;
+      gap: 5px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .menu-toggle:hover,
+    .menu-toggle:focus-visible {
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+    }
+
+    .menu-toggle span {
+      display: block;
+      width: 24px;
+      height: 3px;
+      border-radius: 2px;
+      background: #fff;
+      transition: transform 160ms ease, opacity 160ms ease;
+    }
+
+    .menu-toggle[aria-expanded="true"] span:nth-child(1) {
+      transform: translateY(8px) rotate(45deg);
+    }
+
+    .menu-toggle[aria-expanded="true"] span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .menu-toggle[aria-expanded="true"] span:nth-child(3) {
+      transform: translateY(-8px) rotate(-45deg);
+    }
+
+    .site-nav {
+      position: absolute;
+      top: 70px;
+      right: max(16px, calc((100% - 1180px) / 2));
+      display: grid;
+      width: min(280px, calc(100vw - 32px));
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--surface);
+      box-shadow: 0 12px 30px rgba(27, 57, 94, 0.16);
+    }
+
+    .site-nav[hidden] {
+      display: none;
+    }
+
+    .site-nav a,
+    .nav-status {
+      padding: 10px 14px;
+      color: #29486f;
+      font-size: 0.95rem;
+      text-decoration: none;
+    }
+
+    .site-nav a:hover,
+    .site-nav a:focus-visible {
+      border-radius: 6px;
+      background: #edf5ff;
+      color: var(--blue-dark);
+      outline: none;
+    }
+
+    .nav-status {
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    main {
+      width: min(100% - 32px, 920px);
+      margin: 32px auto 56px;
+    }
+
+    h1, h2, h3 {
+      color: var(--ink);
+    }
+
+    main h2 {
+      margin: 0 0 16px;
+      font-size: 1.5rem;
+      line-height: 1.35;
+    }
+
+    .dashboard-card {
+      margin-bottom: 34px;
+      padding: 28px;
+      border: 1px solid rgba(229, 235, 243, 0.9);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 8px 28px rgba(41, 72, 111, 0.07);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-heading h2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+
+    .section-icon {
+      color: var(--blue);
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+
+    .refresh-status {
+      flex-shrink: 0;
+      color: var(--success);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .weather-panel {
+      padding: 16px 20px;
+      border-radius: 10px;
+      background: #f6f8fb;
+    }
+
+    .weather-location,
+    .weather-result,
+    .weather-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .weather-location {
+      color: #344c69;
+      font-weight: 700;
+    }
+
+    .weather-result {
+      font-weight: 700;
+    }
+
+    .weather-result.is-clear {
+      color: var(--success);
+    }
+
+    .weather-result.is-warning,
+    .weather-result.is-error {
+      color: #d73737;
+    }
+
+    .weather-result-icon {
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .weather-meta {
+      color: #53657b;
+      font-size: 0.92rem;
+    }
+
+    .weather-warnings {
+      margin: 4px 0 10px 28px;
+      color: #c33232;
+    }
+
+    .search-panel {
+      margin-bottom: 24px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #f6f8fb;
+    }
+
+    .search-form {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .search-field {
+      display: grid;
+      flex: 1 1 280px;
+      gap: 5px;
+      color: #344c69;
+      font-weight: 700;
+    }
+
+    .search-field input {
+      width: 100%;
+      min-height: 42px;
+      padding: 8px 12px;
+      border: 1px solid #c9d5e4;
+      border-radius: 6px;
+      background: #fff;
+    }
+
+    .search-field input:focus {
+      border-color: var(--blue);
+      outline: 3px solid rgba(22, 88, 173, 0.14);
+    }
+
+    .search-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .filter-options {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px 18px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .filter-title {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: #344c69;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #465b76;
+      font-size: 0.92rem;
+    }
+
+    .filter-option input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--blue);
+    }
+
+    .secondary-action {
+      color: var(--blue-dark);
+      font-size: 0.92rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .secondary-action:hover {
+      text-decoration: underline;
+    }
+
+    .clear-button {
+      padding: 8px 12px;
+      border: 1px solid #c9d5e4;
+      border-radius: 6px;
+      background: #fff;
+      color: #465b76;
+      font-size: 0.92rem;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .clear-button:hover,
+    .clear-button:focus-visible {
+      border-color: var(--blue);
+      color: var(--blue-dark);
+      outline: none;
+    }
+
+    .result-summary {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .shelter-list {
+      display: grid;
+      gap: 10px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .shelter-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 58px;
+      padding: 12px 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .shelter-number {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      place-items: center;
+      border-radius: 50%;
+      background: #e8f1ff;
+      color: var(--blue-dark);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .empty-result {
+      padding: 22px;
+      border: 1px dashed #bcc9d8;
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    main > h2,
+    main > p,
+    main > form,
+    main > ul {
+      max-width: 860px;
+      margin-right: auto;
+      margin-left: auto;
+    }
+
+    #shelterMap {
+      overflow: hidden;
+      min-height: 300px;
+      border-radius: 10px;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button[type="submit"] {
+      padding: 9px 22px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--blue);
+      color: #fff;
+      cursor: pointer;
+    }
+
+    button[type="submit"]:hover {
+      background: var(--blue-dark);
+    }
+
+    @media (max-width: 600px) {
+      .header-inner {
+        min-height: 62px;
+      }
+
+      .site-nav {
+        top: 62px;
+      }
+
+      main {
+        width: min(100% - 20px, 920px);
+        margin-top: 20px;
+      }
+
+      main > div,
+      main > section {
+        padding: 20px 16px;
+      }
+
+      .dashboard-card {
+        padding: 20px 16px;
+      }
+
+      .search-panel {
+        padding: 16px;
+      }
+
+      .search-actions {
+        width: 100%;
+      }
+
+      .filter-options {
+        grid-template-columns: 1fr;
+      }
+
+      .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- ヘッダー -->
-  <h1>防災アプリ</h1>
-
-  <!-- ナビゲーション -->
-  <nav>
-    <a href="/">ホーム</a> |
-    <a href="/shelter_search">避難所検索</a> |
-    <a href="/shelter_register">避難所登録</a> |
-    <a href="/board">指示・発信ボード</a>
-    ｜
-    {% if session.logged_in %}
-      ログイン中{% if session.username %}（{{ session.username }}）{% endif %}
-      <a href="/logout">ログアウト</a>
-    {% else %}
-      未ログイン
-      <a href="/login">ログイン</a>
-    {% endif %}
-  </nav>
-  <hr>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="{{ url_for('index') }}">防災アプリ</a>
+      <div class="header-actions">
+        <a class="header-home" href="{{ url_for('index') }}">ホーム</a>
+        <button class="menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="site-nav">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+    <nav id="site-nav" class="site-nav" hidden>
+      {% if session.logged_in %}
+        <div class="nav-status">ログイン中{% if session.username %}（{{ session.username }}）{% endif %}</div>
+      {% else %}
+        <div class="nav-status">未ログイン</div>
+      {% endif %}
+      <a href="{{ url_for('index') }}">ホーム</a>
+      <a href="{{ url_for('shelter_search') }}">避難所検索</a>
+      <a href="{{ url_for('shelter_register') }}">避難所登録</a>
+      <a href="{{ url_for('board') }}">指示・発信ボード</a>
+      {% if session.logged_in %}
+        <a href="{{ url_for('logout') }}">ログアウト</a>
+      {% else %}
+        <a href="{{ url_for('login') }}">ログイン</a>
+      {% endif %}
+    </nav>
+  </header>
 
   <main>
-    <!-- ここに子テンプレートの content が入る -->
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const menuButton = document.querySelector('.menu-toggle');
+      const menu = document.getElementById('site-nav');
+
+      menuButton.addEventListener('click', function () {
+        const isOpen = menuButton.getAttribute('aria-expanded') === 'true';
+        menuButton.setAttribute('aria-expanded', String(!isOpen));
+        menuButton.setAttribute('aria-label', isOpen ? 'メニューを開く' : 'メニューを閉じる');
+        menu.hidden = isOpen;
+      });
+
+      document.addEventListener('click', function (event) {
+        if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) {
+          menu.hidden = true;
+          menuButton.setAttribute('aria-expanded', 'false');
+          menuButton.setAttribute('aria-label', 'メニューを開く');
+        }
+      });
+    });
+  </script>
 </body>
 </html>
